@@ -23,6 +23,8 @@ export interface AdminRouteDefinition extends RouteDefinition {
 
 export interface ServerRouteDefinition extends RouteDefinition {
   permission?: string | string[] | null;
+  /** Only show this route for servers whose egg declares this feature flag. */
+  requiresEggFeature?: string;
 }
 
 export * from './extension.ts';

@@ -78,12 +78,16 @@ export default function ServerRouter({ isNormal }: { isNormal: boolean }) {
     return routes;
   }, []);
 
+  const hasRouteAccess = (route: (typeof allServerRoutes)[number]) =>
+    (!route.filter || route.filter()) &&
+    (!route.requiresEggFeature || server.egg.features.includes(route.requiresEggFeature));
+
   const sidebarItems = useMemo(() => {
     const routeOrder = server.eggConfiguration?.routeOrder;
 
     if (!routeOrder) {
       return allServerRoutes
-        .filter((route) => !!route.name && (!route.filter || route.filter()))
+        .filter((route) => !!route.name && hasRouteAccess(route))
         .map((route) => ({
           type: 'route' as const,
           route,
@@ -94,7 +98,7 @@ export default function ServerRouter({ isNormal }: { isNormal: boolean }) {
       .map((item) => {
         if (item.type === 'route') {
           const route = allServerRoutes.find((r) => r.path === item.path);
-          if (!route || !route.name || (route.filter && !route.filter())) return null;
+          if (!route || !route.name || !hasRouteAccess(route)) return null;
           return { type: 'route' as const, route };
         }
 
@@ -115,7 +119,7 @@ export default function ServerRouter({ isNormal }: { isNormal: boolean }) {
         return null;
       })
       .filter(Boolean);
-  }, [server.eggConfiguration?.routeOrder, allServerRoutes, language]);
+  }, [server.eggConfiguration?.routeOrder, server.egg.features, allServerRoutes, language]);
 
   const accessibleRoutePaths = useMemo(
     () => getAccessibleRoutePaths(allServerRoutes, server.eggConfiguration?.routeOrder),
@@ -287,7 +291,7 @@ export default function ServerRouter({ isNormal }: { isNormal: boolean }) {
                 <Routes>
                   <Route element={<ServerStateGuard />}>
                     {allServerRoutes
-                      .filter((route) => !route.filter || route.filter())
+                      .filter(hasRouteAccess)
                       .filter((route) => !accessibleRoutePaths || accessibleRoutePaths.has(route.path))
                       .map(({ path, element: Element, permission }) => (
                         <Route
