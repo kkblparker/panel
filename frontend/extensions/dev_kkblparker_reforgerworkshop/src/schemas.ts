@@ -29,6 +29,17 @@ export interface WorkshopMod {
   tags?: string[];
   imageUrl?: string;
   workshopUrl?: string;
+
+  // Only present on the single-mod details endpoint (GET /workshop/mods/{id})
+  description?: string;
+  downloadCount?: number;
+  dependencies?: WorkshopModDependency[];
+}
+
+export interface WorkshopModDependency {
+  id?: string;
+  name?: string;
+  version?: string;
 }
 
 export interface WorkshopSearchResult {
