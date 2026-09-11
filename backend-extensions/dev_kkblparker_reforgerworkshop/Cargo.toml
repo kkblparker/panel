@@ -2,7 +2,7 @@
 name = "dev_kkblparker_reforgerworkshop"
 description = "Adds an in-panel Workshop browser for Arma Reforger servers, backed by the reforgermods.net API."
 authors = ["kkblparker"]
-version = "1.1.0"
+version = "1.1.1"
 edition = { workspace = true }
 
 [dependencies]
