@@ -11,6 +11,7 @@ import Button from '@/elements/buttons/Button.tsx';
 import { AdminCan } from '@/elements/Can.tsx';
 import Card from '@/elements/data-display/Card.tsx';
 import { type FieldDef, FormEngine, useFormEngine } from '@/elements/form-engine/index.ts';
+import MultiKeyValueInput from '@/elements/input/MultiKeyValueInput.tsx';
 import TextInput from '@/elements/input/TextInput.tsx';
 import Group from '@/elements/layout/Group.tsx';
 import ConfirmationModal from '@/elements/modals/ConfirmationModal.tsx';
@@ -172,6 +173,30 @@ export default function EggVariableContainer({
       label: t('pages.admin.nests.tabs.eggs.page.tabs.variables.page.form.rules', {}),
       description: t('pages.admin.nests.tabs.eggs.page.tabs.variables.page.form.rulesDescription', {}),
       colSpan: 'full',
+    },
+    {
+      type: 'custom',
+      name: 'suggestedValues',
+      colSpan: 'full',
+      render: (f) => (
+        <>
+          <MultiKeyValueInput
+            label={t('pages.admin.nests.tabs.eggs.page.tabs.variables.page.form.suggestedValues', {})}
+            options={Object.fromEntries(f.values.suggestedValues.map((s) => [s.value, s.label]))}
+            onChange={(options) =>
+              f.setFieldValue(
+                'suggestedValues',
+                Object.entries(options).map(([value, label]) => ({ value, label })),
+              )
+            }
+            placeholderKey={t('pages.admin.nests.tabs.eggs.page.tabs.variables.page.form.suggestedValuesKey', {})}
+            placeholderValue={t('pages.admin.nests.tabs.eggs.page.tabs.variables.page.form.suggestedValuesValue', {})}
+          />
+          <p className='text-(--mantine-color-dimmed) text-xs mt-1'>
+            {t('pages.admin.nests.tabs.eggs.page.tabs.variables.page.form.suggestedValuesDescription', {})}
+          </p>
+        </>
+      ),
     },
   ];
 

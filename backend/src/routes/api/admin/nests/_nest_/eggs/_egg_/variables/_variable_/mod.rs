@@ -173,6 +173,7 @@ mod patch {
                     "user_editable": egg_variable.user_editable,
                     "secret": egg_variable.secret,
                     "rules": egg_variable.rules,
+                    "suggested_values": egg_variable.suggested_values,
                 }),
             )
             .await;

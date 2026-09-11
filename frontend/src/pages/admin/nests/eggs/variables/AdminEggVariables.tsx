@@ -64,6 +64,7 @@ export default function AdminEggVariables({
       userEditable: false,
       isSecret: false,
       rules: [],
+      suggestedValues: [],
       created: new Date(),
     };
     setEggVariables([newVariable, ...eggVariables]);

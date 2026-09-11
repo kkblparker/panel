@@ -1,0 +1,1 @@
+ALTER TABLE "nest_egg_variables" ADD COLUMN "suggested_values" jsonb DEFAULT '[]' NOT NULL;

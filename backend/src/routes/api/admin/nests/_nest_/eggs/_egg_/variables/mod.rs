@@ -106,6 +106,8 @@ mod post {
         secret: bool,
         #[garde(custom(rule_validator::validate_rules))]
         rules: Vec<compact_str::CompactString>,
+        #[garde(custom(shared::models::nest_egg_variable::validate_suggested_values))]
+        suggested_values: Vec<shared::models::nest_egg_variable::SuggestedValue>,
     }
 
     #[derive(ToSchema, Serialize)]
@@ -154,6 +156,7 @@ mod post {
                 user_editable: data.user_editable,
                 secret: data.secret,
                 rules: data.rules,
+                suggested_values: data.suggested_values,
             },
         )
         .await
@@ -188,6 +191,7 @@ mod post {
                     "user_editable": egg_variable.user_editable,
                     "secret": egg_variable.secret,
                     "rules": egg_variable.rules,
+                    "suggested_values": egg_variable.suggested_values,
                 }),
             )
             .await;

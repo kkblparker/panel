@@ -497,6 +497,7 @@ impl NestEgg {
                     user_editable: variable.user_editable,
                     secret: variable.secret,
                     rules: variable.rules,
+                    suggested_values: variable.suggested_values,
                 },
             )
             .await
@@ -586,9 +587,9 @@ impl NestEgg {
             if let Err(err) = sqlx::query!(
                 "INSERT INTO nest_egg_variables (
                     egg_uuid, name, name_translations, description, description_translations, order_, env_variable,
-                    default_value, user_viewable, user_editable, rules
+                    default_value, user_viewable, user_editable, rules, suggested_values
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 ON CONFLICT (egg_uuid, env_variable) DO UPDATE SET
                     name = EXCLUDED.name,
                     name_translations = EXCLUDED.name_translations,
@@ -598,7 +599,8 @@ impl NestEgg {
                     default_value = EXCLUDED.default_value,
                     user_viewable = EXCLUDED.user_viewable,
                     user_editable = EXCLUDED.user_editable,
-                    rules = EXCLUDED.rules",
+                    rules = EXCLUDED.rules,
+                    suggested_values = EXCLUDED.suggested_values",
                 self.uuid,
                 &variable.name,
                 serde_json::to_value(&variable.name_translations)?,
@@ -617,7 +619,8 @@ impl NestEgg {
                     .rules
                     .iter()
                     .map(|r| r.as_str())
-                    .collect::<Vec<_>>() as &[&str]
+                    .collect::<Vec<_>>() as &[&str],
+                serde_json::to_value(&variable.suggested_values)?
             )
             .execute(database.read())
             .await
@@ -1430,14 +1433,16 @@ impl DuplicableModel for NestEgg {
         sqlx::query!(
             "INSERT INTO nest_egg_variables (
                 egg_uuid, name, name_translations, description, description_translations,
-                order_, env_variable, default_value, user_viewable, user_editable, secret, rules
+                order_, env_variable, default_value, user_viewable, user_editable, secret, rules,
+                suggested_values
             )
             SELECT
                 $1, nest_egg_variables.name, nest_egg_variables.name_translations,
                 nest_egg_variables.description, nest_egg_variables.description_translations,
                 nest_egg_variables.order_, nest_egg_variables.env_variable,
                 nest_egg_variables.default_value, nest_egg_variables.user_viewable,
-                nest_egg_variables.user_editable, nest_egg_variables.secret, nest_egg_variables.rules
+                nest_egg_variables.user_editable, nest_egg_variables.secret, nest_egg_variables.rules,
+                nest_egg_variables.suggested_values
             FROM nest_egg_variables
             WHERE nest_egg_variables.egg_uuid = $2",
             nest_egg.uuid,
