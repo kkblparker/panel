@@ -16,6 +16,10 @@ mod get {
         1
     }
 
+    // Must match RESULTS_PER_PAGE in the frontend's ServerWorkshop.tsx, which uses a full page
+    // of results as its signal that a next page likely exists.
+    const RESULTS_PER_PAGE: u32 = 20;
+
     #[derive(ToSchema, Deserialize)]
     pub struct Params {
         search: Option<String>,
@@ -73,7 +77,7 @@ mod get {
             tags: &params.tags,
             sort: params.sort.as_deref(),
             page: params.page,
-            per_page: None,
+            per_page: Some(RESULTS_PER_PAGE),
         })
         .await?;
 
