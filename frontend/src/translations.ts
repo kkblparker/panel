@@ -572,6 +572,9 @@ const baseTranslations = defineTranslations({
       selectInput: {
         noResults: 'No Results found.',
       },
+      creatableSelectInput: {
+        useCustomValue: 'Use "{value}"',
+      },
       serverSelect: {
         showOtherUsersServers: "Show other user's servers",
       },
@@ -3573,6 +3576,11 @@ const baseTranslations = defineTranslations({
                         rules: 'Rules',
                         rulesDescription:
                           'See https://laravel.com/docs/12.x/validation#available-validation-rules for the available validation rules.',
+                        suggestedValues: 'Suggested Values',
+                        suggestedValuesDescription:
+                          "Shown as dropdown suggestions on the server's Startup page, without restricting what value can actually be entered - unlike a rules `in:` rule, an arbitrary/custom value is still accepted.",
+                        suggestedValuesKey: 'Value',
+                        suggestedValuesValue: 'Label',
                       },
                       toast: {
                         created: 'Egg variable created.',

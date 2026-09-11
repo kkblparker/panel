@@ -4,6 +4,7 @@ import { z } from 'zod';
 import ActionIcon from '@/elements/buttons/ActionIcon.tsx';
 import Badge from '@/elements/data-display/Badge.tsx';
 import TitleCard from '@/elements/data-display/TitleCard.tsx';
+import CreatableSelect from '@/elements/input/CreatableSelect.tsx';
 import NumberInput from '@/elements/input/NumberInput.tsx';
 import PasswordInput from '@/elements/input/PasswordInput.tsx';
 import Select from '@/elements/input/Select.tsx';
@@ -70,10 +71,17 @@ export default function VariableContainer({
                 .find((rule) => rule.startsWith('in:'))
                 ?.replace('in:', '')
                 .split(',')
-                .map((option) => ({ value: option, label: option }))}
+                .map((option) => {
+                  // An option may carry an explicit display label as `value::Label`, for options
+                  // whose value isn't human-readable on its own (e.g. opaque IDs) - plain options
+                  // with no `::` render exactly as before (label defaults to the value).
+                  const [optionValue, optionLabel] = option.split('::');
+                  return { value: optionValue, label: optionLabel ?? optionValue };
+                })}
               value={value}
               onChange={(value) => setValue(value ?? '')}
               disabled={disabled || loading || (!variable.isEditable && !overrideReadonly)}
+              searchable
             />
           ) : variable.rules.includes('integer') ||
             variable.rules.includes('int') ||
@@ -94,6 +102,16 @@ export default function VariableContainer({
               placeholder={variable.defaultValue ?? ''}
               value={value}
               onChange={(e) => setValue(e.target.value)}
+              disabled={disabled || loading || (!variable.isEditable && !overrideReadonly)}
+            />
+          ) : variable.suggestedValues.length > 0 ? (
+            <CreatableSelect
+              withAsterisk={variable.rules.includes('required')}
+              id={variable.envVariable}
+              placeholder={variable.defaultValue ?? ''}
+              data={variable.suggestedValues}
+              value={value}
+              onChange={setValue}
               disabled={disabled || loading || (!variable.isEditable && !overrideReadonly)}
             />
           ) : (

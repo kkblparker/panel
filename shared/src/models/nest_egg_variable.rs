@@ -63,6 +63,36 @@ pub fn validate_description_translations(
     Ok(())
 }
 
+pub fn validate_suggested_values(
+    suggested_values: &[SuggestedValue],
+    _context: &(),
+) -> Result<(), garde::Error> {
+    if suggested_values.len() > 512 {
+        return Err(garde::Error::new("cannot have more than 512 entries"));
+    }
+
+    for suggested_value in suggested_values {
+        if suggested_value.value.is_empty() || suggested_value.value.len() > 1024 {
+            return Err(garde::Error::new(
+                "suggested value must be between 1 and 1024 characters",
+            ));
+        }
+        if suggested_value.label.is_empty() || suggested_value.label.len() > 255 {
+            return Err(garde::Error::new(
+                "suggested value label must be between 1 and 255 characters",
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+#[derive(ToSchema, Serialize, Deserialize, Clone)]
+pub struct SuggestedValue {
+    pub value: compact_str::CompactString,
+    pub label: compact_str::CompactString,
+}
+
 #[derive(ToSchema, Validate, Serialize, Deserialize, Clone)]
 pub struct ExportedNestEggVariable {
     #[garde(length(chars, min = 1, max = 255))]
@@ -109,6 +139,9 @@ pub struct ExportedNestEggVariable {
         deserialize_with = "crate::deserialize::deserialize_nest_egg_variable_rules"
     )]
     pub rules: Vec<compact_str::CompactString>,
+    #[garde(custom(validate_suggested_values))]
+    #[serde(default)]
+    pub suggested_values: Vec<SuggestedValue>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -127,6 +160,7 @@ pub struct NestEggVariable {
     pub user_editable: bool,
     pub secret: bool,
     pub rules: Vec<compact_str::CompactString>,
+    pub suggested_values: Vec<SuggestedValue>,
 
     pub created: chrono::NaiveDateTime,
 
@@ -201,6 +235,10 @@ impl BaseModel for NestEggVariable {
                 compact_str::format_compact!("{prefix}rules"),
             ),
             (
+                "nest_egg_variables.suggested_values",
+                compact_str::format_compact!("{prefix}suggested_values"),
+            ),
+            (
                 "nest_egg_variables.created",
                 compact_str::format_compact!("{prefix}created"),
             ),
@@ -233,6 +271,9 @@ impl BaseModel for NestEggVariable {
                 .try_get(compact_str::format_compact!("{prefix}user_editable").as_str())?,
             secret: row.try_get(compact_str::format_compact!("{prefix}secret").as_str())?,
             rules: row.try_get(compact_str::format_compact!("{prefix}rules").as_str())?,
+            suggested_values: serde_json::from_value(
+                row.try_get(compact_str::format_compact!("{prefix}suggested_values").as_str())?,
+            )?,
             created: row.try_get(compact_str::format_compact!("{prefix}created").as_str())?,
             extension_data: Self::map_extensions(prefix, row)?,
         })
@@ -297,6 +338,7 @@ impl NestEggVariable {
             user_editable: self.user_editable,
             secret: self.secret,
             rules: self.rules,
+            suggested_values: self.suggested_values,
         }
     }
 }
@@ -327,6 +369,7 @@ impl IntoAdminApiObject for NestEggVariable {
                 user_editable: self.user_editable,
                 is_secret: self.secret,
                 rules: self.rules,
+                suggested_values: self.suggested_values,
                 created: self.created.and_utc(),
             },
             api_object,
@@ -373,6 +416,8 @@ pub struct CreateNestEggVariableOptions {
 
     #[garde(custom(rule_validator::validate_rules))]
     pub rules: Vec<compact_str::CompactString>,
+    #[garde(custom(validate_suggested_values))]
+    pub suggested_values: Vec<SuggestedValue>,
 }
 
 #[async_trait::async_trait]
@@ -416,7 +461,11 @@ impl CreatableModel for NestEggVariable {
             .set("user_viewable", options.user_viewable)
             .set("user_editable", options.user_editable)
             .set("secret", options.secret)
-            .set("rules", &options.rules);
+            .set("rules", &options.rules)
+            .set(
+                "suggested_values",
+                serde_json::to_value(&options.suggested_values)?,
+            );
 
         let row = query_builder
             .returning(&Self::columns_sql(None))
@@ -475,6 +524,9 @@ pub struct UpdateNestEggVariableOptions {
 
     #[garde(inner(custom(rule_validator::validate_rules)))]
     pub rules: Option<Vec<compact_str::CompactString>>,
+
+    #[garde(inner(custom(validate_suggested_values)))]
+    pub suggested_values: Option<Vec<SuggestedValue>>,
 }
 
 #[async_trait::async_trait]
@@ -533,6 +585,14 @@ impl UpdatableModel for NestEggVariable {
             .set("user_editable", options.user_editable)
             .set("secret", options.secret)
             .set("rules", options.rules.as_ref())
+            .set(
+                "suggested_values",
+                options
+                    .suggested_values
+                    .as_ref()
+                    .map(serde_json::to_value)
+                    .transpose()?,
+            )
             .where_eq("uuid", self.uuid);
 
         query_builder.execute(&mut **transaction).await?;
@@ -569,6 +629,9 @@ impl UpdatableModel for NestEggVariable {
         }
         if let Some(rules) = options.rules {
             self.rules = rules;
+        }
+        if let Some(suggested_values) = options.suggested_values {
+            self.suggested_values = suggested_values;
         }
 
         self.run_after_update_handlers(state, transaction).await?;
@@ -666,7 +729,11 @@ impl DuplicableModel for NestEggVariable {
             .set("user_viewable", self.user_viewable)
             .set("user_editable", self.user_editable)
             .set("secret", self.secret)
-            .set("rules", &self.rules);
+            .set("rules", &self.rules)
+            .set(
+                "suggested_values",
+                serde_json::to_value(&self.suggested_values)?,
+            );
 
         let row = query_builder
             .returning(&Self::columns_sql(None))
@@ -701,6 +768,7 @@ pub struct AdminApiNestEggVariable {
     pub user_editable: bool,
     pub is_secret: bool,
     pub rules: Vec<compact_str::CompactString>,
+    pub suggested_values: Vec<SuggestedValue>,
 
     pub created: chrono::DateTime<chrono::Utc>,
 }

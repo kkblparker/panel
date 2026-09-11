@@ -844,6 +844,7 @@ export const nestEggVariablesTable = pgTable(
     user_editable: boolean().default(false).notNull(),
     secret: boolean().default(false).notNull(),
     rules: text().array().notNull(),
+    suggested_values: jsonb().default([]).notNull(),
     created: timestamp().defaultNow().notNull(),
   },
   (cols) => [

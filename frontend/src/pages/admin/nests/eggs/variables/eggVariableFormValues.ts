@@ -15,6 +15,7 @@ export const eggVariableEmptyFormValues: VariableFormValues = {
   userEditable: false,
   secret: false,
   rules: [],
+  suggestedValues: [],
 };
 
 export const eggVariableToFormValues = (variable: z.infer<typeof adminEggVariableSchema>): VariableFormValues => ({
@@ -29,4 +30,5 @@ export const eggVariableToFormValues = (variable: z.infer<typeof adminEggVariabl
   userEditable: variable.userEditable,
   secret: variable.isSecret,
   rules: variable.rules,
+  suggestedValues: variable.suggestedValues,
 });

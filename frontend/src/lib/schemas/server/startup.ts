@@ -11,6 +11,7 @@ export const serverVariableSchema = z.looseObject({
   isEditable: z.boolean(),
   isSecret: z.boolean(),
   rules: z.array(z.string()),
+  suggestedValues: z.array(z.object({ value: z.string(), label: z.string() })).default([]),
   created: z.coerce.date(),
 });
 

@@ -231,6 +231,7 @@ impl IntoApiObject for ServerVariable {
                 is_editable: self.variable.user_editable,
                 is_secret: self.variable.secret,
                 rules: self.variable.rules,
+                suggested_values: self.variable.suggested_values,
                 created: self.created.and_utc(),
             },
             api_object,
@@ -258,6 +259,7 @@ pub struct ApiServerVariable {
     pub is_editable: bool,
     pub is_secret: bool,
     pub rules: Vec<compact_str::CompactString>,
+    pub suggested_values: Vec<super::nest_egg_variable::SuggestedValue>,
 
     pub created: chrono::DateTime<chrono::Utc>,
 }
