@@ -9,3 +9,4 @@ semver = { workspace = true }
 dev_kkblparker_pfsensesync = { path = "../dev_kkblparker_pfsensesync" }
 dev_kkblparker_reforgerworkshop = { path = "../dev_kkblparker_reforgerworkshop" }
 dev_kkblparker_minecraftworkshop = { path = "../dev_kkblparker_minecraftworkshop" }
+dev_kkblparker_steamworkshop = { path = "../dev_kkblparker_steamworkshop" }

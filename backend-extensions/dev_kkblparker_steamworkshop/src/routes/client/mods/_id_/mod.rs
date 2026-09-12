@@ -1,0 +1,167 @@
+use shared::State;
+use utoipa_axum::{router::OpenApiRouter, routes};
+
+mod get {
+    use axum::extract::Path;
+    use serde::Serialize;
+    use shared::{
+        ApiError, GetState,
+        models::{server::GetServer, user::GetPermissionManager},
+        response::{ApiResponse, ApiResponseResult},
+    };
+    use utoipa::ToSchema;
+
+    #[derive(ToSchema, Serialize)]
+    struct Response {
+        #[schema(value_type = Object)]
+        result: serde_json::Value,
+    }
+
+    #[utoipa::path(get, path = "/", responses(
+        (status = OK, body = inline(Response)),
+        (status = BAD_REQUEST, body = ApiError),
+        (status = UNAUTHORIZED, body = ApiError),
+    ), params(
+        (
+            "server" = uuid::Uuid,
+            description = "The server ID",
+            example = "123e4567-e89b-12d3-a456-426614174000",
+        ),
+        (
+            "id" = String,
+            description = "The Steam Workshop published file ID",
+            example = "450814997",
+        ),
+    ))]
+    pub async fn route(
+        state: GetState,
+        permissions: GetPermissionManager,
+        server: GetServer,
+        Path((_server, id)): Path<(String, String)>,
+    ) -> ApiResponseResult {
+        permissions.has_server_permission("steam_workshop.read")?;
+        crate::variables::resolve(&state, &server).await?;
+
+        let result = crate::steam::get_item_details(&[id]).await?;
+
+        ApiResponse::new_serialized(Response { result }).ok()
+    }
+}
+
+mod post {
+    use axum::extract::Path;
+    use serde::Serialize;
+    use shared::{
+        ApiError, GetState,
+        models::{
+            server::{GetServer, GetServerActivityLogger},
+            user::GetPermissionManager,
+        },
+        response::{ApiResponse, ApiResponseResult},
+    };
+    use utoipa::ToSchema;
+
+    #[derive(ToSchema, Serialize)]
+    struct Response {}
+
+    #[utoipa::path(post, path = "/", responses(
+        (status = OK, body = inline(Response)),
+        (status = BAD_REQUEST, body = ApiError),
+        (status = UNAUTHORIZED, body = ApiError),
+    ), params(
+        (
+            "server" = uuid::Uuid,
+            description = "The server ID",
+            example = "123e4567-e89b-12d3-a456-426614174000",
+        ),
+        (
+            "id" = String,
+            description = "The Steam Workshop published file ID",
+            example = "450814997",
+        ),
+    ))]
+    pub async fn route(
+        state: GetState,
+        permissions: GetPermissionManager,
+        server: GetServer,
+        activity_logger: GetServerActivityLogger,
+        Path((_server, id)): Path<(String, String)>,
+    ) -> ApiResponseResult {
+        permissions.has_server_permission("steam_workshop.manage")?;
+        let mut config = crate::variables::resolve(&state, &server).await?;
+
+        crate::variables::add_mod(&state, server.uuid, &mut config, &id).await?;
+
+        activity_logger
+            .log(
+                "server:steam-workshop.mod-list-add",
+                serde_json::json!({ "published_file_id": id }),
+            )
+            .await;
+
+        ApiResponse::new_serialized(Response {}).ok()
+    }
+}
+
+mod delete {
+    use axum::extract::Path;
+    use serde::Serialize;
+    use shared::{
+        ApiError, GetState,
+        models::{
+            server::{GetServer, GetServerActivityLogger},
+            user::GetPermissionManager,
+        },
+        response::{ApiResponse, ApiResponseResult},
+    };
+    use utoipa::ToSchema;
+
+    #[derive(ToSchema, Serialize)]
+    struct Response {}
+
+    #[utoipa::path(delete, path = "/", responses(
+        (status = OK, body = inline(Response)),
+        (status = BAD_REQUEST, body = ApiError),
+        (status = UNAUTHORIZED, body = ApiError),
+    ), params(
+        (
+            "server" = uuid::Uuid,
+            description = "The server ID",
+            example = "123e4567-e89b-12d3-a456-426614174000",
+        ),
+        (
+            "id" = String,
+            description = "The Steam Workshop published file ID",
+            example = "450814997",
+        ),
+    ))]
+    pub async fn route(
+        state: GetState,
+        permissions: GetPermissionManager,
+        server: GetServer,
+        activity_logger: GetServerActivityLogger,
+        Path((_server, id)): Path<(String, String)>,
+    ) -> ApiResponseResult {
+        permissions.has_server_permission("steam_workshop.manage")?;
+        let mut config = crate::variables::resolve(&state, &server).await?;
+
+        crate::variables::remove_mod(&state, server.uuid, &mut config, &id).await?;
+
+        activity_logger
+            .log(
+                "server:steam-workshop.mod-list-remove",
+                serde_json::json!({ "published_file_id": id }),
+            )
+            .await;
+
+        ApiResponse::new_serialized(Response {}).ok()
+    }
+}
+
+pub fn router(state: &State) -> OpenApiRouter<State> {
+    OpenApiRouter::new()
+        .routes(routes!(get::route))
+        .routes(routes!(post::route))
+        .routes(routes!(delete::route))
+        .with_state(state.clone())
+}

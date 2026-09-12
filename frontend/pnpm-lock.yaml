@@ -316,6 +316,12 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
+  extensions/dev_kkblparker_steamworkshop:
+    dependencies:
+      shared:
+        specifier: workspace:*
+        version: link:../shared
+
   extensions/shared: {}
 
 packages:

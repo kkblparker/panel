@@ -45,5 +45,18 @@ pub fn list() -> Vec<ConstructedExtension> {
             version: semver::Version::parse("1.0.0").unwrap(),
             extension: Arc::new(dev_kkblparker_minecraftworkshop::ExtensionStruct::default()),
         },
+        ConstructedExtension {
+            metadata_toml: MetadataToml {
+                package_name: "dev.kkblparker.steamworkshop".to_string(),
+                name: "Steam Workshop".to_string(),
+                panel_version: semver::VersionReq::parse(">=1.1.0").unwrap(),
+                license_text: None,
+            },
+            package_name: "dev.kkblparker.steamworkshop",
+            description: "Adds an in-panel Steam Workshop mod list manager for Steam-based game servers (starting with Arma 3), backed by the Steam Web API.",
+            authors: &["kkblparker"],
+            version: semver::Version::parse("1.0.0").unwrap(),
+            extension: Arc::new(dev_kkblparker_steamworkshop::ExtensionStruct::default()),
+        },
     ]
 }
