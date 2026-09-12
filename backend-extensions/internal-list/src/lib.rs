@@ -29,8 +29,21 @@ pub fn list() -> Vec<ConstructedExtension> {
             package_name: "dev.kkblparker.reforgerworkshop",
             description: "Adds an in-panel Workshop browser for Arma Reforger servers, backed by the reforgermods.net API.",
             authors: &["kkblparker"],
-            version: semver::Version::parse("1.0.0").unwrap(),
+            version: semver::Version::parse("1.1.1").unwrap(),
             extension: Arc::new(dev_kkblparker_reforgerworkshop::ExtensionStruct::default()),
+        },
+        ConstructedExtension {
+            metadata_toml: MetadataToml {
+                package_name: "dev.kkblparker.minecraftworkshop".to_string(),
+                name: "Minecraft Workshop".to_string(),
+                panel_version: semver::VersionReq::parse(">=1.1.0").unwrap(),
+                license_text: None,
+            },
+            package_name: "dev.kkblparker.minecraftworkshop",
+            description: "Adds an in-panel Workshop browser for Minecraft plugins and mods, backed by the Modrinth API.",
+            authors: &["kkblparker"],
+            version: semver::Version::parse("1.0.0").unwrap(),
+            extension: Arc::new(dev_kkblparker_minecraftworkshop::ExtensionStruct::default()),
         },
     ]
 }
