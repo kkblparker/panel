@@ -1,4 +1,4 @@
-import { faDownload, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Alert, Badge, Image, Text } from '@mantine/core';
 import { useEffect, useState } from 'react';
@@ -22,6 +22,8 @@ interface Props {
   onClose: () => void;
   onAdd: (mod: WorkshopMod) => void;
   onRemove: (modId: string, name?: string) => void;
+  /** Only passed when the egg supports a separate load-order list (see ServerWorkshop.tsx). */
+  onAppendToLoadOrder?: (modId: string) => void;
 }
 
 export default function WorkshopModDetailsModal({
@@ -33,6 +35,7 @@ export default function WorkshopModDetailsModal({
   onClose,
   onAdd,
   onRemove,
+  onAppendToLoadOrder,
 }: Props) {
   const { addToast } = useToast();
   const [mod, setMod] = useState<WorkshopMod | null>(null);
@@ -107,6 +110,29 @@ export default function WorkshopModDetailsModal({
                 </Badge>
               ))}
             </Group>
+          )}
+
+          {onAppendToLoadOrder && mod.modIdHint && (
+            <Alert color='blue' variant='light'>
+              <Group justify='space-between' align='center'>
+                <Text size='sm'>
+                  Detected Mod ID:{' '}
+                  <Text span fw={600}>
+                    {mod.modIdHint}
+                  </Text>{' '}
+                  (scraped from this item's description - double check it's correct)
+                </Text>
+                <Button
+                  size='xs'
+                  variant='light'
+                  leftSection={<FontAwesomeIcon icon={faPlus} />}
+                  disabled={!canManage}
+                  onClick={() => onAppendToLoadOrder(mod.modIdHint!)}
+                >
+                  Add to Load Order
+                </Button>
+              </Group>
+            </Alert>
           )}
 
           {mod.description && (

@@ -40,12 +40,12 @@ mod post {
     pub async fn route(
         state: GetState,
         permissions: GetPermissionManager,
-        server: GetServer,
+        mut server: GetServer,
         activity_logger: GetServerActivityLogger,
     ) -> ApiResponseResult {
         permissions.has_server_permission("steam_workshop.manage")?;
         permissions.has_server_permission("control.restart")?;
-        let config = crate::variables::resolve(&state, &server).await?;
+        let config = crate::variables::resolve(&state, &mut server).await?;
 
         tokio::spawn(async move {
             server

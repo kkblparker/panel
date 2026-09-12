@@ -36,11 +36,11 @@ mod get {
     pub async fn route(
         state: GetState,
         permissions: GetPermissionManager,
-        server: GetServer,
+        mut server: GetServer,
         Path((_server, id)): Path<(String, String)>,
     ) -> ApiResponseResult {
         permissions.has_server_permission("steam_workshop.read")?;
-        crate::variables::resolve(&state, &server).await?;
+        crate::variables::resolve(&state, &mut server).await?;
 
         let result = crate::steam::get_item_details(&[id]).await?;
 
@@ -55,7 +55,7 @@ mod post {
         ApiError, GetState,
         models::{
             server::{GetServer, GetServerActivityLogger},
-            user::GetPermissionManager,
+            user::{GetPermissionManager, GetUser},
         },
         response::{ApiResponse, ApiResponseResult},
     };
@@ -83,14 +83,15 @@ mod post {
     pub async fn route(
         state: GetState,
         permissions: GetPermissionManager,
-        server: GetServer,
+        user: GetUser,
+        mut server: GetServer,
         activity_logger: GetServerActivityLogger,
         Path((_server, id)): Path<(String, String)>,
     ) -> ApiResponseResult {
         permissions.has_server_permission("steam_workshop.manage")?;
-        let mut config = crate::variables::resolve(&state, &server).await?;
+        let mut config = crate::variables::resolve(&state, &mut server).await?;
 
-        crate::variables::add_mod(&state, server.uuid, &mut config, &id).await?;
+        crate::variables::add_mod(&state, &mut server, user.uuid, &mut config, &id).await?;
 
         activity_logger
             .log(
@@ -110,7 +111,7 @@ mod delete {
         ApiError, GetState,
         models::{
             server::{GetServer, GetServerActivityLogger},
-            user::GetPermissionManager,
+            user::{GetPermissionManager, GetUser},
         },
         response::{ApiResponse, ApiResponseResult},
     };
@@ -138,14 +139,15 @@ mod delete {
     pub async fn route(
         state: GetState,
         permissions: GetPermissionManager,
-        server: GetServer,
+        user: GetUser,
+        mut server: GetServer,
         activity_logger: GetServerActivityLogger,
         Path((_server, id)): Path<(String, String)>,
     ) -> ApiResponseResult {
         permissions.has_server_permission("steam_workshop.manage")?;
-        let mut config = crate::variables::resolve(&state, &server).await?;
+        let mut config = crate::variables::resolve(&state, &mut server).await?;
 
-        crate::variables::remove_mod(&state, server.uuid, &mut config, &id).await?;
+        crate::variables::remove_mod(&state, &mut server, user.uuid, &mut config, &id).await?;
 
         activity_logger
             .log(

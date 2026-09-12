@@ -58,11 +58,11 @@ mod get {
     pub async fn route(
         state: GetState,
         permissions: GetPermissionManager,
-        server: GetServer,
+        mut server: GetServer,
         Query(params): Query<Params>,
     ) -> ApiResponseResult {
         permissions.has_server_permission("steam_workshop.read")?;
-        let workshop_config = crate::variables::resolve(&state, &server).await?;
+        let workshop_config = crate::variables::resolve(&state, &mut server).await?;
         let config = crate::config::Config::load(&state).await?;
 
         let result = crate::steam::search_workshop(crate::steam::SearchWorkshop {

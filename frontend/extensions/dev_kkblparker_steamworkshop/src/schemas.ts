@@ -14,6 +14,13 @@ export const workshopModResponseSchema = z.object({
 
 export const workshopInstalledResponseSchema = z.object({
   result: z.json(),
+  load_order_supported: z.boolean(),
+  load_order: z.string().nullable(),
+});
+
+export const workshopLoadOrderResponseSchema = z.object({
+  supported: z.boolean(),
+  value: z.string().nullable(),
 });
 
 export interface WorkshopMod {
@@ -30,6 +37,12 @@ export interface WorkshopMod {
   workshopUrl: string;
   banned: boolean;
   banReason?: string;
+  // Best-effort: some games (Project Zomboid) split "Workshop ID" from a separate "Mod ID" that
+  // has to be listed elsewhere to actually load the mod, and have no API to look one up from the
+  // other. Community convention on those games is to print "Mod ID: <id>" in the item's own
+  // description, so this is a plain text scrape of that - a hint to review, not an authoritative
+  // value, since not every mod page follows the convention or follows it correctly.
+  modIdHint?: string;
 }
 
 interface SteamTag {
@@ -60,6 +73,16 @@ interface SteamPublishedFileDetails {
   ban_reason?: string;
 }
 
+// Matches the "Mod ID: <id>" line most current Project Zomboid Workshop pages print in their
+// description (verified against several real, popular mods) - takes the first match, since a
+// "Requires Mod ID: ..." dependency line can appear separately and shouldn't be confused for it.
+const MOD_ID_HINT_PATTERN = /(?<!requires\s)mod\s*id:\s*([^\r\n]+)/i;
+
+function extractModIdHint(description?: string): string | undefined {
+  const match = description?.match(MOD_ID_HINT_PATTERN);
+  return match?.[1]?.trim() || undefined;
+}
+
 function formatSize(bytes?: string | number): string | undefined {
   const value = typeof bytes === 'string' ? Number(bytes) : bytes;
   if (!value || Number.isNaN(value) || value <= 0) return undefined;
@@ -81,12 +104,13 @@ export function toWorkshopMod(raw: unknown): WorkshopMod | null {
 
   const votesUp = details.vote_data?.votes_up ?? 0;
   const votesDown = details.vote_data?.votes_down ?? 0;
+  const description = details.file_description || details.short_description || undefined;
 
   return {
     id: details.publishedfileid,
     name: details.title || details.publishedfileid,
     summary: details.short_description || undefined,
-    description: details.file_description || details.short_description || undefined,
+    description,
     imageUrl: details.preview_url || undefined,
     tags: (details.tags ?? []).map((tag) => tag.tag).filter((tag): tag is string => !!tag),
     rating: details.vote_data?.score,
@@ -96,6 +120,7 @@ export function toWorkshopMod(raw: unknown): WorkshopMod | null {
     workshopUrl: `https://steamcommunity.com/sharedfiles/filedetails/?id=${details.publishedfileid}`,
     banned: details.banned ?? false,
     banReason: details.ban_reason || undefined,
+    modIdHint: extractModIdHint(description),
   };
 }
 

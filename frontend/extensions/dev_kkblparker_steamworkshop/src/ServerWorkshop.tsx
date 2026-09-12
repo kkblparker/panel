@@ -10,8 +10,10 @@ import ServerContentContainer from '@/elements/containers/ServerContentContainer
 import Card from '@/elements/data-display/Card.tsx';
 import Spinner from '@/elements/feedback/Spinner.tsx';
 import Select from '@/elements/input/Select.tsx';
+import TextArea from '@/elements/input/TextArea.tsx';
 import Group from '@/elements/layout/Group.tsx';
 import SegmentedControl from '@/elements/layout/SegmentedControl.tsx';
+import Stack from '@/elements/layout/Stack.tsx';
 import ConfirmationModal from '@/elements/modals/ConfirmationModal.tsx';
 import { useServerCan } from '@/plugins/usePermissions.ts';
 import { useToast } from '@/providers/ToastProvider.tsx';
@@ -21,6 +23,7 @@ import applyChanges from './api/applyChanges.ts';
 import getModList from './api/getModList.ts';
 import removeMod from './api/removeMod.ts';
 import searchMods from './api/searchMods.ts';
+import setLoadOrder from './api/setLoadOrder.ts';
 import { WorkshopMod } from './schemas.ts';
 import WorkshopModDetailsModal from './WorkshopModDetailsModal.tsx';
 
@@ -55,14 +58,50 @@ export default function ServerWorkshop() {
   const [detailsModId, setDetailsModId] = useState<string | null>(null);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
 
+  const [loadOrderSupported, setLoadOrderSupported] = useState(false);
+  const [loadOrder, setLoadOrderValue] = useState('');
+  const [loadOrderInput, setLoadOrderInput] = useState('');
+  const [savingLoadOrder, setSavingLoadOrder] = useState(false);
+
   const modListIds = useMemo(() => new Set(modList.map((mod) => mod.id)), [modList]);
 
   const loadModList = () => {
     setModListLoading(true);
     getModList(server.uuid)
-      .then(setModList)
+      .then((result) => {
+        setModList(result.mods);
+        setLoadOrderSupported(result.loadOrderSupported);
+        setLoadOrderValue(result.loadOrder ?? '');
+        setLoadOrderInput(result.loadOrder ?? '');
+      })
       .catch((error) => addToast(httpErrorToHuman(error), 'error'))
       .finally(() => setModListLoading(false));
+  };
+
+  const saveLoadOrder = (value: string) => {
+    setSavingLoadOrder(true);
+    setLoadOrder(server.uuid, value)
+      .then(() => {
+        setLoadOrderValue(value);
+        setLoadOrderInput(value);
+        addToast('Load order saved. Restart the server to apply it.', 'success');
+      })
+      .catch((error) => addToast(httpErrorToHuman(error), 'error'))
+      .finally(() => setSavingLoadOrder(false));
+  };
+
+  const appendToLoadOrder = (modId: string) => {
+    const existing = loadOrder
+      .split(';')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+
+    if (existing.includes(modId)) {
+      addToast(`${modId} is already in the load order.`, 'info');
+      return;
+    }
+
+    saveLoadOrder([...existing, modId].join(';'));
   };
 
   useEffect(() => {
@@ -165,48 +204,83 @@ export default function ServerWorkshop() {
       }
     >
       {view === 'list' ? (
-        modListLoading ? (
-          <Spinner.Centered />
-        ) : modList.length === 0 ? (
-          <Text c='dimmed'>No mods in this server's Workshop list yet. Browse and add some, then Apply Changes.</Text>
-        ) : (
-          <div className='flex flex-col gap-2'>
-            {modList.map((mod) => (
-              <Card key={mod.id} p='sm' hoverable onClick={() => setDetailsModId(mod.id)}>
-                <Group justify='space-between'>
-                  <Group gap='sm'>
-                    {mod.imageUrl && <Image src={mod.imageUrl} h={40} w={40} radius='sm' fit='cover' alt={mod.name} />}
-                    <div>
-                      <Text fw={600}>{mod.name}</Text>
-                      <Text size='xs' c='dimmed'>
-                        {mod.id}
-                      </Text>
-                    </div>
-                    {mod.banned && (
-                      <Badge color='red' size='xs'>
-                        Banned
-                      </Badge>
-                    )}
+        <Stack gap='lg'>
+          {modListLoading ? (
+            <Spinner.Centered />
+          ) : modList.length === 0 ? (
+            <Text c='dimmed'>No mods in this server's Workshop list yet. Browse and add some, then Apply Changes.</Text>
+          ) : (
+            <div className='flex flex-col gap-2'>
+              {modList.map((mod) => (
+                <Card key={mod.id} p='sm' hoverable onClick={() => setDetailsModId(mod.id)}>
+                  <Group justify='space-between'>
+                    <Group gap='sm'>
+                      {mod.imageUrl && (
+                        <Image src={mod.imageUrl} h={40} w={40} radius='sm' fit='cover' alt={mod.name} />
+                      )}
+                      <div>
+                        <Text fw={600}>{mod.name}</Text>
+                        <Text size='xs' c='dimmed'>
+                          {mod.id}
+                        </Text>
+                      </div>
+                      {mod.banned && (
+                        <Badge color='red' size='xs'>
+                          Banned
+                        </Badge>
+                      )}
+                    </Group>
+                    <Button
+                      size='xs'
+                      color='red'
+                      variant='light'
+                      leftSection={<FontAwesomeIcon icon={faTrash} />}
+                      disabled={!canManage}
+                      loading={pendingModId === mod.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        doRemove(mod.id, mod.name);
+                      }}
+                    >
+                      Remove
+                    </Button>
                   </Group>
-                  <Button
-                    size='xs'
-                    color='red'
-                    variant='light'
-                    leftSection={<FontAwesomeIcon icon={faTrash} />}
-                    disabled={!canManage}
-                    loading={pendingModId === mod.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      doRemove(mod.id, mod.name);
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </Group>
-              </Card>
-            ))}
-          </div>
-        )
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {loadOrderSupported && (
+            <div>
+              <Text fw={600} size='sm'>
+                Load Order
+              </Text>
+              <Text size='xs' c='dimmed' mb='xs'>
+                This egg loads Workshop downloads and actual mod loading separately - this is the raw,
+                semicolon-separated list of mod IDs (not Workshop IDs) that get loaded, in order. Check a mod's detail
+                page for its Mod ID, or use the "Add to Load Order" shortcut there when one is detected.
+              </Text>
+              <TextArea
+                value={loadOrderInput}
+                onChange={(e) => setLoadOrderInput(e.currentTarget.value)}
+                disabled={!canManage}
+                autosize
+                minRows={2}
+              />
+              <Group justify='flex-end' mt='xs'>
+                <Button
+                  size='xs'
+                  variant='light'
+                  disabled={!canManage || loadOrderInput === loadOrder}
+                  loading={savingLoadOrder}
+                  onClick={() => saveLoadOrder(loadOrderInput)}
+                >
+                  Save Load Order
+                </Button>
+              </Group>
+            </div>
+          )}
+        </Stack>
       ) : (
         <>
           {loading ? (
@@ -294,6 +368,7 @@ export default function ServerWorkshop() {
         onClose={() => setDetailsModId(null)}
         onAdd={doAdd}
         onRemove={doRemove}
+        onAppendToLoadOrder={loadOrderSupported ? appendToLoadOrder : undefined}
       />
 
       <ConfirmationModal

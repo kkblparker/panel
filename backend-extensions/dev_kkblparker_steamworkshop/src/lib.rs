@@ -19,6 +19,17 @@
 //! and `/workshop/apply` triggers a normal **restart** (the same power
 //! action the server's own Restart button sends), not a reinstall.
 //!
+//! Not every steamcmd egg stores its mod list the same way Arma 3 does, though. Project Zomboid's
+//! dedicated server has no wrapper-script equivalent at all - it downloads its own `WorkshopItems=`
+//! list itself, from a plain `Zomboid/Server/<name>.ini` file, not an egg variable. So
+//! `variables.rs` resolves a per-egg `Storage` (`variable` or `ini_file`) rather than assuming
+//! one - `ini_storage.rs` is the small `key=value` line editor that mode uses to patch that file
+//! via Wings without disturbing anything else in it. Project Zomboid also splits "which Workshop
+//! items to download" (`WorkshopItems=`) from "which mods to actually load" (`Mods=`, keyed by
+//! each mod's own internal mod.info ID, not its Workshop ID) - the Steam Web API has no way to
+//! derive one from the other, so that second list is exposed as a plain user-edited value
+//! (`/workshop/load-order`) rather than something this extension manages per-item.
+//!
 //! Searching the Workshop needs a Steam Web API key (admin-configured, see
 //! `settings`/`config`) - `IPublishedFileService/QueryFiles` isn't keyless,
 //! unlike `GetPublishedFileDetails` (fetching a known item's own details).
@@ -28,6 +39,7 @@
 //! clobber its permission definitions in the global registry.
 
 mod config;
+mod ini_storage;
 mod routes;
 mod settings;
 mod steam;
