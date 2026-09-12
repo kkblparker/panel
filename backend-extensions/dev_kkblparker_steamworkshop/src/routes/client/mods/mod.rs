@@ -29,6 +29,9 @@ mod get {
     struct Response {
         #[schema(value_type = Object)]
         result: serde_json::Value,
+        /// Which `ModListKind`s this egg supports - a single entry means the frontend should just
+        /// show a plain "Add" button, more than one means it should offer a picker.
+        available_kinds: Vec<crate::variables::ModListKind>,
     }
 
     #[utoipa::path(get, path = "/", responses(
@@ -74,7 +77,11 @@ mod get {
         })
         .await?;
 
-        ApiResponse::new_serialized(Response { result }).ok()
+        ApiResponse::new_serialized(Response {
+            result,
+            available_kinds: workshop_config.available_kinds(),
+        })
+        .ok()
     }
 }
 

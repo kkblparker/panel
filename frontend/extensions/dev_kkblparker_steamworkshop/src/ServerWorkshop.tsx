@@ -1,4 +1,4 @@
-import { faDownload, faRotate, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faRotate, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Badge, Image, Text } from '@mantine/core';
 import debounce from 'debounce';
@@ -18,13 +18,14 @@ import ConfirmationModal from '@/elements/modals/ConfirmationModal.tsx';
 import { useServerCan } from '@/plugins/usePermissions.ts';
 import { useToast } from '@/providers/ToastProvider.tsx';
 import { useServerStore } from '@/stores/server.ts';
+import AddModButton from './AddModButton.tsx';
 import addMod from './api/addMod.ts';
 import applyChanges from './api/applyChanges.ts';
 import getModList from './api/getModList.ts';
 import removeMod from './api/removeMod.ts';
 import searchMods from './api/searchMods.ts';
 import setLoadOrder from './api/setLoadOrder.ts';
-import { WorkshopMod } from './schemas.ts';
+import { MOD_LIST_KIND_LABELS, ModListKind, WorkshopMod } from './schemas.ts';
 import WorkshopModDetailsModal from './WorkshopModDetailsModal.tsx';
 
 const RESULTS_PER_PAGE = 20;
@@ -63,6 +64,9 @@ export default function ServerWorkshop() {
   const [loadOrderInput, setLoadOrderInput] = useState('');
   const [savingLoadOrder, setSavingLoadOrder] = useState(false);
 
+  const [availableKinds, setAvailableKinds] = useState<ModListKind[]>(['client']);
+  const [kindsById, setKindsById] = useState<Record<string, ModListKind[]>>({});
+
   const modListIds = useMemo(() => new Set(modList.map((mod) => mod.id)), [modList]);
 
   const loadModList = () => {
@@ -70,6 +74,8 @@ export default function ServerWorkshop() {
     getModList(server.uuid)
       .then((result) => {
         setModList(result.mods);
+        setKindsById(result.kindsById);
+        setAvailableKinds(result.availableKinds);
         setLoadOrderSupported(result.loadOrderSupported);
         setLoadOrderValue(result.loadOrder ?? '');
         setLoadOrderInput(result.loadOrder ?? '');
@@ -115,6 +121,7 @@ export default function ServerWorkshop() {
       .then((result) => {
         setMods(result.mods);
         setTotal(result.total);
+        setAvailableKinds(result.availableKinds);
       })
       .catch((error) => addToast(httpErrorToHuman(error), 'error'))
       .finally(() => setLoading(false));
@@ -129,12 +136,19 @@ export default function ServerWorkshop() {
     [],
   );
 
-  const doAdd = (mod: WorkshopMod) => {
+  const doAdd = (mod: WorkshopMod, kind: ModListKind) => {
     setPendingModId(mod.id);
-    addMod(server.uuid, mod.id)
+    addMod(server.uuid, mod.id, kind)
       .then(() => {
-        addToast(`${mod.name} was added to the mod list. Use "Apply Changes" to download it.`, 'success');
+        addToast(
+          `${mod.name} was added as a ${MOD_LIST_KIND_LABELS[kind].toLowerCase()}. Use "Apply Changes" to download it.`,
+          'success',
+        );
         setModList((prev) => [...prev.filter((existing) => existing.id !== mod.id), mod]);
+        setKindsById((prev) => ({
+          ...prev,
+          [mod.id]: prev[mod.id]?.includes(kind) ? prev[mod.id] : [...(prev[mod.id] ?? []), kind],
+        }));
       })
       .catch((error) => addToast(httpErrorToHuman(error), 'error'))
       .finally(() => setPendingModId(null));
@@ -146,6 +160,10 @@ export default function ServerWorkshop() {
       .then(() => {
         addToast(`${name ?? modId} was removed from the mod list.`, 'success');
         setModList((prev) => prev.filter((existing) => existing.id !== modId));
+        setKindsById((prev) => {
+          const { [modId]: _removed, ...rest } = prev;
+          return rest;
+        });
       })
       .catch((error) => addToast(httpErrorToHuman(error), 'error'))
       .finally(() => setPendingModId(null));
@@ -224,6 +242,12 @@ export default function ServerWorkshop() {
                           {mod.id}
                         </Text>
                       </div>
+                      {availableKinds.length > 1 &&
+                        (kindsById[mod.id] ?? []).map((kind) => (
+                          <Badge key={kind} size='xs' variant='light'>
+                            {MOD_LIST_KIND_LABELS[kind]}
+                          </Badge>
+                        ))}
                       {mod.banned && (
                         <Badge color='red' size='xs'>
                           Banned
@@ -326,19 +350,12 @@ export default function ServerWorkshop() {
                           Remove
                         </Button>
                       ) : (
-                        <Button
-                          size='xs'
-                          color='blue'
-                          leftSection={<FontAwesomeIcon icon={faDownload} />}
+                        <AddModButton
+                          availableKinds={availableKinds}
                           disabled={!canManage}
                           loading={pendingModId === mod.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            doAdd(mod);
-                          }}
-                        >
-                          Add
-                        </Button>
+                          onAdd={(kind) => doAdd(mod, kind)}
+                        />
                       )}
                     </Group>
                   </Card>
@@ -363,6 +380,7 @@ export default function ServerWorkshop() {
         serverUuid={server.uuid}
         modId={detailsModId}
         inList={detailsModId !== null && modListIds.has(detailsModId)}
+        kinds={detailsModId !== null ? (kindsById[detailsModId] ?? []) : []}
         canManage={canManage}
         pending={detailsModId !== null && pendingModId === detailsModId}
         onClose={() => setDetailsModId(null)}

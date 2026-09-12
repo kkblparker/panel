@@ -55,7 +55,7 @@ pub fn list() -> Vec<ConstructedExtension> {
             package_name: "dev.kkblparker.steamworkshop",
             description: "Adds an in-panel Steam Workshop mod list manager for Steam-based game servers (Arma 3, Project Zomboid), backed by the Steam Web API.",
             authors: &["kkblparker"],
-            version: semver::Version::parse("1.1.0").unwrap(),
+            version: semver::Version::parse("1.2.0").unwrap(),
             extension: Arc::new(dev_kkblparker_steamworkshop::ExtensionStruct::default()),
         },
     ]

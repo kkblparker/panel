@@ -1,19 +1,35 @@
 import { z } from 'zod';
 
+// Mirrors the backend's `ModListKind` (variables.rs). Most eggs only ever use `client` - `server`
+// and `optional` only show up for eggs that split their mod lists the way Arma 3 does
+// (MODIFICATIONS/SERVERMODS/OPTIONALMODS).
+export const modListKindSchema = z.enum(['client', 'server', 'optional']);
+export type ModListKind = z.infer<typeof modListKindSchema>;
+
+export const MOD_LIST_KIND_LABELS: Record<ModListKind, string> = {
+  client: 'Client Mod',
+  server: 'Server-Only Mod',
+  optional: 'Optional Mod',
+};
+
 // The Steam Web API's raw JSON (QueryFiles/GetPublishedFileDetails) is external, snake_case, and
 // not ours to version - kept as opaque json (see api-transform's isOpaqueJson) and normalized into
 // WorkshopMod below for rendering, the same way the Reforger/Minecraft Workshop extensions treat
 // their upstream APIs.
 export const workshopSearchResponseSchema = z.object({
   result: z.json(),
+  available_kinds: z.array(modListKindSchema),
 });
 
 export const workshopModResponseSchema = z.object({
   result: z.json(),
+  available_kinds: z.array(modListKindSchema),
 });
 
 export const workshopInstalledResponseSchema = z.object({
   result: z.json(),
+  mods: z.array(z.object({ id: z.string(), kinds: z.array(modListKindSchema) })),
+  available_kinds: z.array(modListKindSchema),
   load_order_supported: z.boolean(),
   load_order: z.string().nullable(),
 });

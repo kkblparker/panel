@@ -1,4 +1,4 @@
-import { faDownload, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Alert, Badge, Image, Text } from '@mantine/core';
 import { useEffect, useState } from 'react';
@@ -10,17 +10,20 @@ import Stack from '@/elements/layout/Stack.tsx';
 import { Modal, ModalFooter } from '@/elements/modals/Modal.tsx';
 import { openUrl } from '@/lib/network/url.ts';
 import { useToast } from '@/providers/ToastProvider.tsx';
+import AddModButton from './AddModButton.tsx';
 import getMod from './api/getMod.ts';
-import { WorkshopMod } from './schemas.ts';
+import { MOD_LIST_KIND_LABELS, ModListKind, WorkshopMod } from './schemas.ts';
 
 interface Props {
   serverUuid: string;
   modId: string | null;
   inList: boolean;
+  /** Which list(s) this mod is currently in, if `inList` - for the kind badge(s). */
+  kinds: ModListKind[];
   canManage: boolean;
   pending: boolean;
   onClose: () => void;
-  onAdd: (mod: WorkshopMod) => void;
+  onAdd: (mod: WorkshopMod, kind: ModListKind) => void;
   onRemove: (modId: string, name?: string) => void;
   /** Only passed when the egg supports a separate load-order list (see ServerWorkshop.tsx). */
   onAppendToLoadOrder?: (modId: string) => void;
@@ -30,6 +33,7 @@ export default function WorkshopModDetailsModal({
   serverUuid,
   modId,
   inList,
+  kinds,
   canManage,
   pending,
   onClose,
@@ -39,6 +43,7 @@ export default function WorkshopModDetailsModal({
 }: Props) {
   const { addToast } = useToast();
   const [mod, setMod] = useState<WorkshopMod | null>(null);
+  const [availableKinds, setAvailableKinds] = useState<ModListKind[]>(['client']);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -49,7 +54,10 @@ export default function WorkshopModDetailsModal({
 
     setLoading(true);
     getMod(serverUuid, modId)
-      .then(setMod)
+      .then((result) => {
+        setMod(result.mod);
+        setAvailableKinds(result.availableKinds);
+      })
       .catch((error) => addToast(httpErrorToHuman(error), 'error'))
       .finally(() => setLoading(false));
   }, [modId]);
@@ -102,8 +110,14 @@ export default function WorkshopModDetailsModal({
             </Group>
           </Group>
 
-          {mod.tags.length > 0 && (
+          {(inList || mod.tags.length > 0) && (
             <Group gap='xs'>
+              {inList &&
+                kinds.map((kind) => (
+                  <Badge key={kind} size='sm' color='blue'>
+                    {MOD_LIST_KIND_LABELS[kind]}
+                  </Badge>
+                ))}
               {mod.tags.map((tag) => (
                 <Badge key={tag} size='sm' variant='light'>
                   {tag}
@@ -157,15 +171,13 @@ export default function WorkshopModDetailsModal({
                 Remove
               </Button>
             ) : (
-              <Button
-                color='blue'
-                leftSection={<FontAwesomeIcon icon={faDownload} />}
+              <AddModButton
+                availableKinds={availableKinds}
+                size='sm'
                 disabled={!canManage}
                 loading={pending}
-                onClick={() => onAdd(mod)}
-              >
-                Add to List
-              </Button>
+                onAdd={(kind) => onAdd(mod, kind)}
+              />
             )}
             <Button variant='default' onClick={onClose}>
               Close

@@ -15,6 +15,10 @@ mod get {
     struct Response {
         #[schema(value_type = Object)]
         result: serde_json::Value,
+        /// Which `ModListKind`s this egg supports adding a mod as - a single entry means the
+        /// frontend should just show a plain "Add" button, more than one means it should offer a
+        /// picker (e.g. Arma 3's Client/Server/Optional split).
+        available_kinds: Vec<crate::variables::ModListKind>,
     }
 
     #[utoipa::path(get, path = "/", responses(
@@ -40,17 +44,21 @@ mod get {
         Path((_server, id)): Path<(String, String)>,
     ) -> ApiResponseResult {
         permissions.has_server_permission("steam_workshop.read")?;
-        crate::variables::resolve(&state, &mut server).await?;
+        let config = crate::variables::resolve(&state, &mut server).await?;
 
         let result = crate::steam::get_item_details(&[id]).await?;
 
-        ApiResponse::new_serialized(Response { result }).ok()
+        ApiResponse::new_serialized(Response {
+            result,
+            available_kinds: config.available_kinds(),
+        })
+        .ok()
     }
 }
 
 mod post {
     use axum::extract::Path;
-    use serde::Serialize;
+    use serde::{Deserialize, Serialize};
     use shared::{
         ApiError, GetState,
         models::{
@@ -61,8 +69,18 @@ mod post {
     };
     use utoipa::ToSchema;
 
+    use crate::variables::ModListKind;
+
     #[derive(ToSchema, Serialize)]
     struct Response {}
+
+    #[derive(ToSchema, Deserialize)]
+    pub struct Payload {
+        /// Which mod list to add this item to - defaults to `client` for eggs that don't offer a
+        /// choice (only one list configured).
+        #[serde(default)]
+        kind: ModListKind,
+    }
 
     #[utoipa::path(post, path = "/", responses(
         (status = OK, body = inline(Response)),
@@ -79,7 +97,7 @@ mod post {
             description = "The Steam Workshop published file ID",
             example = "450814997",
         ),
-    ))]
+    ), request_body = inline(Payload))]
     pub async fn route(
         state: GetState,
         permissions: GetPermissionManager,
@@ -87,16 +105,18 @@ mod post {
         mut server: GetServer,
         activity_logger: GetServerActivityLogger,
         Path((_server, id)): Path<(String, String)>,
+        shared::Payload(data): shared::Payload<Payload>,
     ) -> ApiResponseResult {
         permissions.has_server_permission("steam_workshop.manage")?;
         let mut config = crate::variables::resolve(&state, &mut server).await?;
 
-        crate::variables::add_mod(&state, &mut server, user.uuid, &mut config, &id).await?;
+        crate::variables::add_mod(&state, &mut server, user.uuid, &mut config, data.kind, &id)
+            .await?;
 
         activity_logger
             .log(
                 "server:steam-workshop.mod-list-add",
-                serde_json::json!({ "published_file_id": id }),
+                serde_json::json!({ "published_file_id": id, "kind": data.kind }),
             )
             .await;
 

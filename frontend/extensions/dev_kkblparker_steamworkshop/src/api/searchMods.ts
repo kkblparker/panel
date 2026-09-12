@@ -1,6 +1,6 @@
 import { axiosInstance } from '@/api/axios.ts';
 import { parseFromApi } from '@/lib/serialization/api-transform.ts';
-import { totalResults, toWorkshopMods, workshopSearchResponseSchema } from '../schemas.ts';
+import { ModListKind, totalResults, toWorkshopMods, workshopSearchResponseSchema } from '../schemas.ts';
 
 export default async (uuid: string, params: { search?: string; sort?: string; page?: number }) => {
   const { data } = await axiosInstance.get(`/api/client/servers/${uuid}/workshop/mods`, {
@@ -11,7 +11,11 @@ export default async (uuid: string, params: { search?: string; sort?: string; pa
     },
   });
 
-  const result = parseFromApi(workshopSearchResponseSchema, data).result;
+  const parsed = parseFromApi(workshopSearchResponseSchema, data);
 
-  return { mods: toWorkshopMods(result), total: totalResults(result) };
+  return {
+    mods: toWorkshopMods(parsed.result),
+    total: totalResults(parsed.result),
+    availableKinds: parsed.available_kinds as ModListKind[],
+  };
 };
