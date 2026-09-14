@@ -6,7 +6,7 @@ export default async (
   uuid: string,
   params: { search?: string; sort?: string; page?: number },
 ): Promise<WorkshopSearchResult> => {
-  const { data } = await axiosInstance.get(`/api/client/servers/${uuid}/workshop/mods`, {
+  const { data } = await axiosInstance.get(`/api/client/servers/${uuid}/minecraft-workshop/mods`, {
     params: {
       search: params.search || undefined,
       sort: params.sort || undefined,

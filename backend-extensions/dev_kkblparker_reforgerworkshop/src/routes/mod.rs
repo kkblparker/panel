@@ -22,7 +22,7 @@ pub(crate) fn ensure_reforger_workshop(
 
 pub fn router(state: &shared::State) -> OpenApiRouter<shared::State> {
     OpenApiRouter::new()
-        .nest("/workshop/mods", mods::router(state))
-        .nest("/workshop/installed", installed::router(state))
+        .nest("/reforger-workshop/mods", mods::router(state))
+        .nest("/reforger-workshop/installed", installed::router(state))
         .with_state(state.clone())
 }

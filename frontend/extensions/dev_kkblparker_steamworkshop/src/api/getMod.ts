@@ -6,7 +6,7 @@ export default async (
   uuid: string,
   modId: string,
 ): Promise<{ mod: WorkshopMod | null; availableKinds: ModListKind[] }> => {
-  const { data } = await axiosInstance.get(`/api/client/servers/${uuid}/workshop/mods/${modId}`);
+  const { data } = await axiosInstance.get(`/api/client/servers/${uuid}/steam-workshop/mods/${modId}`);
   const parsed = parseFromApi(workshopModResponseSchema, data);
 
   return {

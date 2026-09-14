@@ -3,7 +3,7 @@ import { parseFromApi } from '@/lib/serialization/api-transform.ts';
 import { ModListKind, totalResults, toWorkshopMods, workshopSearchResponseSchema } from '../schemas.ts';
 
 export default async (uuid: string, params: { search?: string; sort?: string; page?: number }) => {
-  const { data } = await axiosInstance.get(`/api/client/servers/${uuid}/workshop/mods`, {
+  const { data } = await axiosInstance.get(`/api/client/servers/${uuid}/steam-workshop/mods`, {
     params: {
       search: params.search || undefined,
       sort: params.sort || undefined,

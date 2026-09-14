@@ -11,7 +11,7 @@ export default async (
   loadOrderSupported: boolean;
   loadOrder: string | null;
 }> => {
-  const { data } = await axiosInstance.get(`/api/client/servers/${uuid}/workshop/installed`);
+  const { data } = await axiosInstance.get(`/api/client/servers/${uuid}/steam-workshop/installed`);
   const parsed = parseFromApi(workshopInstalledResponseSchema, data);
 
   const kindsById: Record<string, ModListKind[]> = {};
